@@ -1,0 +1,121 @@
+version: '3.7'
+
+services:
+  # consul-node1:
+  #   container_name: consul-node1
+  #   image: consul:latest
+  #   #environment:
+  #   #  CONSUL_BIND_INTERFACE: eth0
+  #   ports:
+  #     - '8300:8300'
+  #     - '8301:8301'
+  #     - '8301:8301/udp'
+  #     - '8500:8500'
+  #     - '8501:8501'
+  #     - '8600:8600'
+  #     - '8600:8600/udp'
+  #   volumes:
+  #     - ./consul/config/consul-node1:/config
+  #     - ./consul/data/consul-node1:/data
+  #     - ./consul/certificates:/certificates
+  #   command: agent -server -data-dir=/data -config-file=/config/consul-node1.hcl
+  #   restart: always
+
+  # consul-node2:
+  #   container_name: consul-node2
+  #   image: consul:latest
+  #   volumes:
+  #     - ./consul/config/consul-node2:/config
+  #     - ./consul/data/consul-node2:/data
+  #     - ./consul/certificates:/certificates
+  #   command: agent -server -data-dir=/data -config-file=/config/consul-node2.hcl
+  #   restart: always
+
+  # consul-node3:
+  #   container_name: consul-node3
+  #   image: consul:latest
+  #   volumes:
+  #     - ./consul/config/consul-node3:/config
+  #     - ./consul/data/consul-node3:/data
+  #     - ./consul/certificates:/certificates
+  #   command: agent -server -data-dir=/data -config-file=/config/consul-node3.hcl
+  #   restart: always
+
+  # vault-node1:
+  #   container_name: vault-node1
+  #   image: vault:latest
+  #   depends_on:
+  #     - consul-node1
+  #   ports:
+  #     - "8200:8200"
+  #     - "8201:8201"
+  #   volumes:
+  #     - ./vault/config/vault-node1:/config
+  #     - ./vault/data/vault-node1:/data
+  #     - ./vault/certificates:/certificates
+  #     - ./vault/policies/vault-node1:/policies
+  #     - ./vault/logs/vault-node1:/logs
+  #     - ./consul/certificates:/consul-certificates
+  #   cap_add:
+  #     - IPC_LOCK
+  #   command: server -config=/config/vault-node1.hcl
+  #   restart: always
+
+  eapisvc:
+    container_name: eapisvc
+    image: ingiosregistry.azurecr.io/eapisvc:2.1.0-dev-8080-1590727406
+    environment:
+      - spring.profiles.active=dev
+    #depends_on:
+    #  - vault-node1
+    ports:
+      - "9084:8080"
+    #restart: always
+
+  trkapisvc:
+    container_name: trkapisvc
+    image: ingiosregistry.azurecr.io/trkapisvc:2.1.0-dev-8080-1590735076
+    environment:
+      - spring.profiles.active=dev
+    #depends_on:
+    #  - vault-node1
+    ports:
+      - "9083:8080"
+    #restart: always
+
+  sapisvc:
+    container_name: sapisvc
+    image: ingiosregistry.azurecr.io/slidermap:2.1.0-dev-8080-1590727902
+    environment:
+      - spring.profiles.active=dev
+    #depends_on:
+    #  - vault-node1
+    ports:
+      - "9082:8080"
+    #restart: always
+
+  mapisvc:
+    container_name: mapisvc
+    image: ingiosregistry.azurecr.io/mapping:2.1.0-dev-8080-1590727469
+    environment:
+      - spring.profiles.active=dev
+    depends_on:
+      - sapisvc
+    ports:
+      - "9081:8080"
+    #restart: always
+
+  dapisvc:
+    container_name: dapisvc
+    image: ingiosregistry.azurecr.io/dapisvc:2.1.0-dev-8080-1590712345
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://*:80
+      #- HOST_PORTS=8080
+      - ServiceAppSettings__AppEnviKey=dapisvc-dev
+      - ServiceAppSettings__EapiSvcUri=https://eapisvc-dev.azurewebsites.net
+    depends_on:
+      - eapisvc #,mapisvc
+    ports:
+      - "9080:80"
+    #restart: always
